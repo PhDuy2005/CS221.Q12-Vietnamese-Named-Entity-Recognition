@@ -81,9 +81,6 @@ CS221.Q12-Vietnamese-Named-Entity-Recognition/
 │   ├── train.txt                  # Training data (VLSP 2016 format)
 │   └── test.txt                   # Test data (VLSP 2016 format)
 │
-├── figs/
-│   ├── *.jpg                      # Figures used in report and slides
-│   └── *.png                      # Figures used in report and slides
 │
 ├── models/
 │   ├── crf_best.joblib            # Best CRF model (sklearn-crfsuite)
@@ -101,13 +98,22 @@ CS221.Q12-Vietnamese-Named-Entity-Recognition/
 │   ├── train_CRF.ipynb            # Training notebook for CRF model
 │   └── train_BiLSTM-CRF.ipynb     # Training notebook for BiLSTM-CRF model
 │
-├── static/
+├── slide/
 │   ├── style.css                  # CSS styles for Flask web demo
 │   └── script.js                  # JavaScript logic for UI interactions
+│
+├── 
+│                   
+├── static/
+│   ├── figs/                 # Figures used in report and slides
+|          ├── *.jpg                     
+│          └── *.png   
+│   └── main.tex                 # Latex file
 │
 ├── templates/
 │   └── index.html                 # Main HTML template for Flask app
 │
+├── CS221.Q12-Project_Slide_Vietnamese-NER.pdf           # Slide
 ├── app.py                         # Flask application entry point
 ├── requirements.txt               # Python dependencies
 ├── CS221_Slides.pdf               # Presentation slides
