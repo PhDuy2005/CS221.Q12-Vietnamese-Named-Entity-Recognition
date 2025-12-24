@@ -74,6 +74,7 @@
 ---
 
 ## Repository Structure
+```
 CS221.Q12-Vietnamese-Named-Entity-Recognition/
 │
 ├── dataset/
@@ -110,3 +111,6 @@ CS221.Q12-Vietnamese-Named-Entity-Recognition/
 ├── requirements.txt               # Python dependencies
 ├── CS221_Slides.pdf               # Presentation slides
 └── README.md                      # Project documentation
+```
+
+---
