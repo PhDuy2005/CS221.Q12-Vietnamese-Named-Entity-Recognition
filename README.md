@@ -111,6 +111,7 @@ CS221.Q12-Vietnamese-Named-Entity-Recognition/
 │   └── index.html                 # Main HTML template for Flask app
 │
 ├── CS221.Q12-Project_Slide_Vietnamese-NER.pdf           # Slide
+├── CS221.Q12-Project_Report.pdf         # Report
 ├── app.py                         # Flask application entry point
 ├── requirements.txt               # Python dependencies
 ├── CS221_Slides.pdf               # Presentation slides
