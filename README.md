@@ -27,3 +27,48 @@
 
 ---
 
+
+## Table of Contents
+- [Features](#features)
+- [Dataset](#dataset)
+- [Repository Structure](#repository-structure)
+- [Methodology](#methodology)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Results](#results)
+- [Demo](#demo)
+- [Conclusion](#conclusion)
+- [License](#license)
+
+---
+
+## Features
+- Implementation of **three NER models**:
+  - Hidden Markov Model (HMM)
+  - Conditional Random Fields (CRF)
+  - BiLSTM-CRF (PyTorch)
+- Full training pipeline using **Jupyter notebooks**.
+- Evaluation using **token-level and span-level metrics**.
+- Saved best models for inference (`.joblib`, `.pt`).
+- **Flask web demo**:
+  - Switch between CRF and BiLSTM-CRF.
+  - Highlight predicted named entities.
+  - Display model metrics (F1, Precision, Recall).
+- Clean project structure suitable for academic submission.
+
+---
+
+## Dataset
+- Dataset: **VLSP 2016 Vietnamese NER**
+- Format: CoNLL-style text files.
+- Data splits:
+  - `train.txt`
+  - `test.txt`
+- Entity types include:
+  - `PER` (Person entities)
+  - `ORG` (Organization entities)
+  - `LOC` (Location entities)
+  - `MISC` (Miscellaneous entities)
+  - `O` (Outside tag for non-entity tokens)
+
+---
