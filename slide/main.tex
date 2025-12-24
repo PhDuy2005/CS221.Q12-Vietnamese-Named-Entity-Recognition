@@ -1,0 +1,1548 @@
+\documentclass[11pt]{beamer}
+\usetheme{Frankfurt}
+\usefonttheme{serif}
+
+% --- Tiếng Việt ---
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+
+% --- Gói hỗ trợ ---
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{amsmath,amssymb,graphicx,booktabs}
+\usepackage{hyperref}
+\usepackage[table]{xcolor}
+\hypersetup{colorlinks=true,urlcolor=blue}
+
+\usepackage{xcolor}
+\usepackage{listings}
+
+\lstdefinestyle{hmmstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  columns=fullflexible,
+  frame=single,
+  rulecolor=\color{black!25},
+  backgroundcolor=\color{blue!3},
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  numbers=left,
+  numberstyle=\tiny\color{black!45},
+  keywordstyle=\bfseries\color{blue!70!black},
+  commentstyle=\itshape\color{green!45!black},
+  stringstyle=\color{orange!70!black},
+  emphstyle=\bfseries\color{purple!70!black},
+}
+
+
+% --- Màu chủ đạo ---
+\definecolor{uitblue}{RGB}{0,70,140}
+\setbeamercolor{structure}{fg=uitblue}
+\setbeamercolor{frametitle}{fg=white,bg=uitblue}
+\setbeamercolor{block title}{bg=uitblue!80,fg=white}
+\setbeamercolor{block body}{bg=blue!5,fg=black}
+
+
+% --- Tiêu đề ---
+\title[NER tiếng Việt]{\textbf{Nhận diện thực thể tên riêng tiếng Việt \\ (Vietnamese Named Entity Recognition)}}
+
+\author[CS221.Q12]{Nguyễn Công Phát, Nguyễn Lê Phong, Phạm Trần Khánh Duy \\23521143, \and 23521168, \and 23520384}
+\institute[UIT]{Trường Đại học Công nghệ Thông tin – ĐHQG TP.HCM}
+\date[26 December 2025]{GVHD: TS. Nguyễn Thị Quý}
+
+% --- Footer ---
+\setbeamertemplate{footline}{
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.33\paperwidth,ht=2.2ex,dp=1ex,center]{author in head/foot}%
+      TS. Nguyễn Thị Quý
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.34\paperwidth,ht=2.2ex,dp=1ex,center]{title in head/foot}%
+      CS221.Q12 - Xử lý Ngôn ngữ Tự nhiên
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.33\paperwidth,ht=2.2ex,dp=1ex,center]{date in head/foot}%
+      26/12/2025  \hspace{1em} \insertframenumber{} / \inserttotalframenumber
+    \end{beamercolorbox}%
+  }%
+  \vskip0pt%
+}
+
+% --- Show outline before each section ---
+\AtBeginSection[]{
+  \begin{frame}{Mục lục}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\begin{document}
+
+% Title
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% Outline
+\begin{frame}{Mục lục}
+  \tableofcontents
+\end{frame}
+
+% 1. Giới thiệu
+% ------------------------------
+\section{Tổng quan đề tài}
+% 3. Giới thiệu bài toán
+
+\begin{frame}[shrink=10]{1.1. Giới thiệu bài toán NER}
+\scriptsize
+
+% Block 1: Xanh dương
+\setbeamercolor{block title}{bg=uitblue!80,fg=white}
+\setbeamercolor{block body}{bg=blue!5,fg=black}
+\begin{block}{Định nghĩa}
+Nhận diện thực thể tên riêng (Named Entity Recognition - NER) là bài toán trong xử lý ngôn ngữ tự nhiên, 
+nhằm \textbf{gán nhãn cho từng từ/token trong câu} để xác định các thực thể như 
+\textit{tên người (PER), tổ chức (ORG), địa danh (LOC), v.v.}
+\end{block}
+
+% Block 2: Xanh lá
+\setbeamercolor{block title}{bg=green!70!black,fg=white}
+\setbeamercolor{block body}{bg=green!5,fg=black}
+\begin{block}{Ví dụ (BIO)}
+\small
+Hà\_Nội/\textbf{B-LOC} là/O thủ\_đô/O của/O Việt\_Nam/\textbf{B-LOC} ./O
+\end{block}
+
+% Block 3: Cam
+\setbeamercolor{block title}{bg=orange!80!black,fg=white}
+\setbeamercolor{block body}{bg=orange!10,fg=black}
+\begin{block}{Ứng dụng}
+\begin{itemize}
+  \item Trích xuất thông tin trong tin tức, báo cáo.
+  \item Hỗ trợ hệ thống hỏi đáp, tìm kiếm thực thể.
+  \item Tiền xử lý cho dịch máy, tóm tắt văn bản.
+\end{itemize}
+\end{block}
+
+% Block 4: Đỏ
+\setbeamercolor{block title}{bg=red!80!black,fg=white}
+\setbeamercolor{block body}{bg=red!10,fg=black}
+\begin{block}{Thách thức với tiếng Việt}
+\begin{itemize}
+  \item Tên riêng thường nhiều từ: \textit{Thành\_phố\_Hồ\_Chí\_Minh}.
+  \item Từ ghép không luôn có dấu cách rõ ràng.
+  \item Ngữ cảnh phụ thuộc mạnh, khó đoán chỉ từ một token.
+  \item Chữ hoa không nhất quán trong corpora tiếng Việt.
+  \item Nhiều tên tổ chức dùng địa danh $\Rightarrow$ dễ nhầm ORG $\leftrightarrow$ LOC.
+  \item Chất lượng tách từ ảnh hưởng trực tiếp tới NER.
+\end{itemize}
+\end{block}
+
+\end{frame}
+% ------------------------------
+\begin{frame}[shrink=10]{1.2. Lý do chọn bài toán}
+
+\scriptsize
+
+\begin{block}{Bối cảnh}
+\begin{itemize}
+  \item \textbf{Named Entity Recognition (NER)} là bài toán nền tảng trong xử lý ngôn ngữ tự nhiên.
+  \item Đóng vai trò quan trọng trong các hệ thống \textit{trích xuất thông tin, hỏi--đáp và phân tích văn bản}.
+  \item Với \textbf{tiếng Việt}, NER gặp nhiều thách thức do:
+  \begin{itemize}
+    \item Ngôn ngữ đa âm tiết, cấu trúc tên riêng phức tạp.
+    \item Hạn chế về dữ liệu gán nhãn chất lượng cao.
+  \end{itemize}
+\end{itemize}
+\end{block}
+
+\vspace{0.12cm}
+
+\centering
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\rowcolors{2}{blue!3!white}{white}
+\resizebox{0.98\textwidth}{!}{%
+\begin{tabular}{|p{2.2cm}|p{5.6cm}|p{4.2cm}|}
+\hline
+\rowcolor{uitblue!90!black}
+\textcolor{white}{\textbf{Phương pháp}} &
+\textcolor{white}{\textbf{Mô tả}} &
+\textcolor{white}{\textbf{Hạn chế}} \\
+\hline
+\textbf{HMM} &
+Mô hình xác suất gán nhãn chuỗi dựa trên xác suất chuyển trạng thái (transition) và phát xạ (emission). &
+Giả định Markov, không học được ngữ cảnh dài. \\
+\hline
+\textbf{CRF} &
+Mô hình xác suất có điều kiện, tối ưu xác suất toàn chuỗi nhãn. &
+Phụ thuộc nhiều vào đặc trưng thủ công (features). \\
+\hline
+\textbf{BiLSTM--CRF} &
+Kết hợp LSTM hai chiều (học ngữ cảnh) và CRF (gán nhãn). &
+Cần dữ liệu lớn, chi phí huấn luyện cao. \\
+\hline
+\textbf{Transformers} &
+Các công trình NER tiếng Việt gần đây chủ yếu khai thác \textit{fine-tuning} PhoBERT, XLM--R hoặc mT5 để tận dụng ngữ cảnh sâu. &
+Tốn tài nguyên; nhiều nghiên cứu dùng dữ liệu tự xây dựng/mở rộng và không công bố đầy đủ code \& dữ liệu $\Rightarrow$ khó tái lập. \\
+\hline
+\end{tabular}
+}
+
+\vspace{0.06cm}
+{\tiny \textit{Bảng:} Tổng quan các hướng tiếp cận NER và hạn chế trong bối cảnh tiếng Việt.}
+
+\vspace{0.12cm}
+
+\begin{block}{Mục tiêu đồ án}
+\begin{itemize}
+  \item So sánh định lượng ba mô hình: \textbf{HMM, CRF và BiLSTM--CRF}.
+  \item Thực nghiệm trên cùng một tập dữ liệu chuẩn.
+  \item Đánh giá mô hình bằng các độ đo phù hợp cho bài toán NER.
+  \item Phân tích lỗi và tác động của các kỹ thuật tối ưu trong bối cảnh tiếng Việt.
+\end{itemize}
+\end{block}
+
+\end{frame}
+% ------------------------------
+% 1.3. Input & Output
+\begin{frame}{1.3. Phát biểu bài toán}
+\scriptsize
+
+% --- Block INPUT (màu chủ đạo) ---
+\setbeamercolor{block title}{bg=uitblue!80,fg=white}
+\setbeamercolor{block body}{bg=blue!5,fg=black}
+\begin{block}{Input}
+\begin{itemize}
+    \item \textbf{Tập dữ liệu huấn luyện} gồm $N$ câu đã gán nhãn theo chuẩn BIO:
+    \begin{itemize}
+        \item Mỗi câu: dãy token $(w_1, w_2, \ldots, w_t)$ (token đã được tách sẵn trong dataset).
+        \item Mỗi token có nhãn tương ứng $(l_1, l_2, \ldots, l_t)$.
+    \end{itemize}
+    \item \textbf{Câu mới cần dự đoán}: chuỗi token $(w_1, w_2, \ldots, w_t)$.
+\end{itemize}
+\end{block}
+
+% --- Block OUTPUT (cùng màu với input) ---
+\setbeamercolor{block title}{bg=uitblue!80,fg=white}
+\setbeamercolor{block body}{bg=blue!5,fg=black}
+\begin{block}{Output}
+\begin{itemize}
+    \item Chuỗi nhãn dự đoán $(l_1, l_2, \ldots, l_t)$ ứng với từng token.
+    \item Mỗi nhãn thuộc tập nhãn $L$ theo chuẩn BIO:
+    \begin{itemize}
+        \item \textbf{B-} và \textbf{I-}: bắt đầu và bên trong một thực thể (PER, ORG, LOC, MISC).
+        \item \textbf{O}: token không thuộc thực thể nào.
+    \end{itemize}
+\end{itemize}
+
+% --- Minh hoạ workflow ---
+\centering
+\resizebox{0.9\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=2cm,
+    every node/.style={font=\small},
+    box/.style={draw, rounded corners, fill=white, inner sep=5pt},
+    labeltext/.style={font=\bfseries}
+]
+% Input
+\node[box] (input) {['Đấy','là','lần','đầu\_tiên','tôi','gặp','đồng\_chí','Bông','Văn','Dĩa','.']};
+\node[labeltext, below=0.2cm of input] {Input};
+
+% Model
+\node[labeltext, right=2cm of input] (algo) {Mô hình};
+
+% Output
+\node[box, right=2cm of algo] (output) {['O','O','O','O','O','O','O','B-PER','I-PER','I-PER','O']};
+\node[labeltext, below=0.2cm of output] {Output};
+
+% Arrows
+\draw[->, thick] (input) -- (algo);
+\draw[->, thick] (algo) -- (output);
+\end{tikzpicture}%
+}
+\end{block}
+
+
+
+\end{frame}
+%====================== TỔNG QUAN PHƯƠNG PHÁP ======================
+\section{Tổng quan các phương pháp}
+%------------------------------------------------------
+% 2.1. Hidden Markov Model (HMM) – Tổng quan
+%------------------------------------------------------
+\begin{frame}[fragile, shrink=30]{2.1. Mô hình Hidden Markov Model (HMM)}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.44\textwidth}
+
+%--------- Block Tổng quan ---------
+\setbeamercolor{block title}{bg=blue!65!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Tổng quan mô hình}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item \textbf{Hidden Markov Model (HMM)} là mô hình xác suất dùng để gán nhãn chuỗi.
+  \item Giả định tồn tại chuỗi trạng thái ẩn $Y=(y_1,\ldots,y_T)$ 
+  sinh ra chuỗi quan sát: $X = (x_1, x_2, \ldots, x_T)$
+  \item Hai xác suất cốt lõi:
+\begin{itemize}
+  \item \textbf{Transition}: $P(y_t \mid y_{t-1})$
+  \item \textbf{Emission}: $P(x_t \mid y_t)$
+\end{itemize}
+
+\item \textbf{Training:} ước lượng MLE; 
+\item \textbf{Decoding:} Viterbi (tối ưu chuỗi nhãn).
+  \end{itemize}
+
+\end{block}
+
+\vspace{-0.3em}
+
+%--------- Block Ưu điểm ---------
+\setbeamercolor{block title}{bg=teal!70!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Ưu điểm}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item Dễ hiểu, nền tảng xác suất rõ ràng.
+  \item Huấn luyện nhanh, phù hợp dữ liệu nhỏ.
+  \item Mô hình hóa tốt bài toán gán nhãn chuỗi cơ bản.
+\end{itemize}
+\end{block}
+
+\vspace{-0.3em}
+
+%--------- Block Nhược điểm ---------
+\setbeamercolor{block title}{bg=red!70!black, fg=white}
+\setbeamercolor{block body}{bg=red!5!white}
+\begin{block}{\textbf{Nhược điểm}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item Giả định Markov bậc 1 $\Rightarrow$ chỉ phụ thuộc trạng thái trước.
+  \item Không tận dụng được ngữ cảnh dài.
+  \item Hiệu quả thấp với dữ liệu mất cân bằng nhãn (NER tiếng Việt).
+\end{itemize}
+\end{block}
+
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.5\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figs/hmm_structure.png}
+
+{\tiny Sơ đồ HMM: trạng thái ẩn (Y) sinh ra quan sát (X).}
+
+\vspace{0.4em}
+
+\setbeamercolor{block title}{bg=violet!75!black, fg=white}
+\setbeamercolor{block body}{bg=violet!5!white}
+\begin{block}{\textbf{Ví dụ cách HMM hoạt động trong NER}}
+\small
+\textbf{Câu:}\\
+\texttt{Hà\_Nội / là / thủ\_đô / của / Việt\_Nam / .}
+\vspace{0.2em}
+\centering
+\begin{tikzpicture}[
+  node distance=0.95cm,
+  every node/.style={font=\scriptsize},
+  y/.style={draw, rounded corners, fill=white, inner sep=2.5pt},
+  x/.style={draw, rounded corners, fill=white, inner sep=2.5pt},
+  arr/.style={-Latex, thick}
+]
+% hidden states (tags)
+\node[y] (y1) {\texttt{B-LOC}};
+\node[y, right=1.05cm of y1] (y2) {\texttt{O}};
+\node[y, right=1.05cm of y2] (y3) {\texttt{O}};
+\node[y, right=1.05cm of y3] (y4) {\texttt{O}};
+\node[y, right=1.05cm of y4] (y5) {\texttt{B-LOC}};
+\node[y, right=1.05cm of y5] (y6) {\texttt{O}};
+
+% observations (tokens)
+\node[x, below=0.65cm of y1] (x1) {\texttt{Hà\_Nội}};
+\node[x, below=0.65cm of y2] (x2) {\texttt{là}};
+\node[x, below=0.65cm of y3] (x3) {\texttt{thủ\_đô}};
+\node[x, below=0.65cm of y4] (x4) {\texttt{của}};
+\node[x, below=0.65cm of y5] (x5) {\texttt{Việt\_Nam}};
+\node[x, below=0.65cm of y6] (x6) {\texttt{.}};
+
+% transitions
+\draw[arr] (y1) -- (y2);
+\draw[arr] (y2) -- (y3);
+\draw[arr] (y3) -- (y4);
+\draw[arr] (y4) -- (y5);
+\draw[arr] (y5) -- (y6);
+
+% emissions
+\draw[arr] (y1) -- (x1);
+\draw[arr] (y2) -- (x2);
+\draw[arr] (y3) -- (x3);
+\draw[arr] (y4) -- (x4);
+\draw[arr] (y5) -- (x5);
+\draw[arr] (y6) -- (x6);
+
+% note
+\node[below=0.35cm of x3, align=center, font=\tiny] (note)
+{Viterbi chọn chuỗi $\hat{Y}=\arg\max_Y \prod_t P(y_t|y_{t-1})P(x_t|y_t)$};
+\end{tikzpicture}
+\vspace{0.1em}
+\raggedright
+\textbf{Chuỗi nhãn:}\\
+\texttt{B-LOC \; O \; O \; O \; B-LOC \; O}
+\vspace{0.1em}\\
+HMM chọn chuỗi nhãn tối ưu dựa trên
+\textbf{xác suất chuyển nhãn} và
+\textbf{xác suất phát xạ}.
+\end{block}
+
+\end{column}
+
+\end{columns}
+\end{frame}
+
+
+
+%------------------------------------------------------
+% 2.2. Cài đặt HMM 
+%------------------------------------------------------
+\begin{frame}[fragile, shrink=30]{2.2. Cài đặt HMM trong bài toán}
+\scriptsize
+\begin{columns}
+%========================= LEFT =========================
+\begin{column}{0.55\textwidth}
+
+%--------- Block Cài đặt ---------
+\setbeamercolor{block title}{bg=orange!80!black, fg=white}
+\setbeamercolor{block body}{bg=orange!6!white, fg=black}
+\begin{block}{\textbf{Cài đặt trong bài toán}}
+\textbf{Train + Decode:}
+\begin{enumerate}
+  \item Đếm \textit{transition} $C(y_{t-1},y_t)$ và \textit{emission} $C(y_t,x_t)$ (có trọng số).
+  \item \textbf{Smoothing} (Xử lý zero probabilities): $P=\dfrac{C+\epsilon}{\sum C + |\mathcal{Y}|\epsilon}$, $\epsilon=10^{-3}$.
+  \item Lấy log-prob, decode bằng Viterbi để ra chuỗi nhãn tốt nhất.
+\end{enumerate}
+
+\vspace{0.2em}
+\textbf{Trọng số lớp (mất cân bằng):}
+\[
+w(O)=0.5,\quad
+w(y\neq O)=\min(5.0,\ \tfrac{\text{median\_freq}}{\text{count}(y)+10^{-5}})
+\]
+\end{block}
+
+\vspace{-0.25em}
+
+%--------- Block Cải tiến ---------
+\setbeamercolor{block title}{bg=violet!85!black, fg=white}
+\setbeamercolor{block body}{bg=violet!6!white, fg=black}
+\begin{block}{\textbf{Các cải tiến được áp dụng}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Balanced sampling}: oversample câu chứa nhãn hiếm đến ngưỡng $\approx 0.5 \times$ lớp lớn nhất.
+  \item \textbf{Class weighting}: Tính trọng số nghịch đảo dựa trên tần suất trung vị $\Rightarrow$  giảm ảnh hưởng nhãn \texttt{O}, tăng nhãn hiếm (Giới hạn trọng số lớp: \texttt{max\_weight = 5.0}).
+  \item \textbf{Focal adjustment (tag $\neq$ O)}: áp dụng khi tính \textit{transition + emission}:
+  \[
+  p \leftarrow \min\big(1,\ p\cdot (1+\alpha(1-p)^\gamma)\big),
+  \ \alpha=0.1,\ \gamma=2.0
+  \]
+\end{itemize}
+\end{block}
+
+
+\end{column}
+
+%========================= RIGHT =========================
+\begin{column}{0.45\textwidth}
+
+\setbeamercolor{block title}{bg=blue!70!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white, fg=black}
+\begin{block}{\textbf{Pseudo-code (HMM + cải tiến)}}
+
+\begin{lstlisting}[style=hmmstyle,
+  language=Python,
+  emph={Input,Hyper,eps,alpha,gamma,max_weight,w,
+        compute_class_weights,balanced_sampling,
+        C_tr,C_em,P_tr,P_em,Viterbi,log},
+]
+# Input + hyper-params
+Input: train_sents X, train_tags Y
+Hyper: eps=1e-3, alpha=0.1, gamma=2.0,
+       max_weight=5.0, w(O)=0.5
+
+# 1) Imbalance handling
+w(O)=0.5
+w(y!=O)=min(max_weight, median_freq/(count(y)+1e-5))
+X,Y = balanced_sampling(X,Y, target=0.5*max_class)
+
+# 2) Weighted counts
+C_tr[y_{t-1},y_t] += w(y_t)
+C_em[y_t, x_t]    += w(y_t)
+
+# 3) Laplace smoothing
+P_tr=(C_tr+eps)/(sum_next C_tr + |Y|*eps)
+P_em=(C_em+eps)/(sum_word C_em + |V|*eps)
+
+# 4) Focal adjustment (tag != O)
+p = min(1, p*(1 + alpha*(1-p)^gamma))
+
+# 5) Decode (Viterbi)
+A=log(P_tr); B=log(P_em)
+y_hat = Viterbi(A,B,x)
+\end{lstlisting}
+
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+%-------------------------------------------
+\begin{frame}[fragile, shrink=30]{2.3. Mô hình Conditional Random Field (CRF)}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.53\textwidth}
+
+%--------- Block Tổng quan ---------
+\setbeamercolor{block title}{bg=blue!60!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Tổng quan}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item \textbf{CRF} mô hình hoá trực tiếp xác suất có điều kiện toàn chuỗi: $\;P(Y \mid X)$.
+  
+  \item Không giả định độc lập Markov như HMM $\Rightarrow$ khai thác \textbf{phụ thuộc nhãn liền kề} $\Rightarrow$  biểu diễn trực tiếp mối quan hệ giữa các nhãn trong chuỗi..
+  \item Giảm lỗi boundary (ví dụ \texttt{I-ORG} không thể theo sau \texttt{B-PER})
+\end{itemize}
+\end{block}
+
+\vspace{-0.25em}
+
+\centering
+\includegraphics[width=\textwidth]{figs/crf.png}
+{\tiny Sơ đồ mô hình CRF trong bài toán gán nhãn chuỗi.}
+
+\vspace{-0.25em}
+%--------- Block Ví dụ CRF xử lý câu (rút gọn) ---------
+\setbeamercolor{block title}{bg=green!70!black, fg=white}
+\setbeamercolor{block body}{bg=green!5!white}
+\begin{block}{\textbf{Ví dụ: CRF xử lý một câu}}
+\small
+\textbf{Câu:}
+\texttt{Hà\_Nội / là / thủ\_đô / của / Việt\_Nam / .}
+
+\vspace{0.1em}
+\textbf{Cách CRF suy diễn:} Trích đặc trưng token + ngữ cảnh $\Rightarrow$ Kết hợp điểm nhãn và ràng buộc BIO  $\Rightarrow$ Viterbi chọn chuỗi nhãn tối ưu.
+
+
+\textbf{Kết quả:}
+\texttt{B-LOC \; O \; O \; O \; B-LOC \; O}
+\end{block}
+
+
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.44\textwidth}
+%--------- Block Đặc trưng ---------
+\setbeamercolor{block title}{bg=teal!70!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Đặc trưng (Features) sử dụng}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item Token hiện tại và các token lân cận (context window).
+  \item Hình thái: \texttt{is\_upper}, \texttt{is\_title}, \texttt{is\_digit}, dấu gạch dưới.
+  \item Tiền tố / hậu tố (prefix, suffix).
+  \item Vị trí câu: \texttt{BOS}, \texttt{EOS}.
+\end{itemize}
+\end{block}
+
+\vspace{-0.25em}
+%--------- Block Cài đặt ---------
+\setbeamercolor{block title}{bg=orange!80!black, fg=white}
+\setbeamercolor{block body}{bg=orange!5!white}
+\begin{block}{\textbf{Cài đặt CRF trong bài toán}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item Thư viện: \texttt{sklearn-crfsuite}.
+  \item Tối ưu: \textbf{L-BFGS} (\texttt{algorithm='lbfgs'}) – thuật toán tối ưu gradient hiệu quả cho CRF.
+  \item Regularization: \texttt{c1=0.1} (L1) và \texttt{c2=0.1} (L2) nhằm giảm overfitting và kiểm soát độ phức tạp mô hình.
+  \item \texttt{max\_iterations=100}: giới hạn số vòng lặp huấn luyện để đảm bảo hội tụ.
+  \item \texttt{all\_possible\_transitions=True}: cho phép xét cả các chuyển nhãn chưa xuất hiện trong tập huấn luyện, giúp mô hình xử lý tốt hơn các nhãn hiếm và giảm lỗi boundary.
+\end{itemize}
+
+\vspace{0.2em}
+\textbf{Lý do lựa chọn cấu hình:}\\
+Các tham số được chọn nhằm cân bằng giữa khả năng tổng quát hóa và hiệu năng mô hình trên tập dữ liệu, đồng thời đảm bảo CRF khai thác hiệu quả ràng buộc chuỗi nhãn trong bài toán NER tiếng Việt.
+\end{block}
+
+
+\end{column}
+
+\end{columns}
+\end{frame}
+
+
+%-------------------------------------------
+\begin{frame}[fragile, shrink=30]{2.4. Mô hình BiLSTM + CRF}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== Cột trái ======================
+\begin{column}{0.6\textwidth}
+
+%--------- Block Kiến trúc ---------
+\setbeamercolor{block title}{bg=blue!60!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Kiến trúc}}
+\setlength{\itemsep}{2pt}
+\begin{enumerate}
+  \item \textbf{Embedding Layer:} ánh xạ token $\rightarrow$ vector ngữ nghĩa (Word Embedding).
+  \item \textbf{BiLSTM Layer:} học ngữ cảnh hai chiều (trước–sau) giúp nắm được phụ thuộc dài hạn.
+  \item \textbf{CRF Layer:} giải mã chuỗi nhãn hợp lệ tối ưu dựa trên toàn chuỗi.
+\end{enumerate}
+\end{block}
+
+\vspace{-0.4em}
+
+%--------- Block Cài đặt trong bài toán ---------
+\setbeamercolor{block title}{bg=teal!70!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Cài đặt trong bài toán}}
+\setlength{\itemsep}{2pt}
+\begin{itemize}
+  \item \textbf{Embedding} được học \textbf{từ đầu} (random init), tối ưu cùng mô hình trên tập dữ liệu (không dùng pre-trained).
+  \item \textbf{BiLSTM hai chiều} học ngữ cảnh trước–sau cho mỗi token.
+  \item \textbf{CRF layer} áp đặt ràng buộc BIO và decode bằng \textbf{Viterbi}.
+  \item Huấn luyện với \textbf{Adam}, \texttt{lr=0.001}, \textbf{early stopping = 5} để tránh overfitting.
+  \item Tham số chính: \texttt{epochs=40}, \texttt{batch\_size=256}.
+\end{itemize}
+\end{block}
+\vspace{-0.4em}
+
+%--------- Block Ví dụ xử lý câu ---------
+\setbeamercolor{block title}{bg=green!70!black, fg=white}
+\setbeamercolor{block body}{bg=green!5!white}
+\begin{block}{\textbf{Ví dụ: BiLSTM--CRF xử lý một câu}}
+\small
+\textbf{Câu:}\\
+\texttt{Hà\_Nội / là / thủ\_đô / của / Việt\_Nam / .}
+
+\vspace{0.15em}
+\textbf{Quy trình:}
+\begin{itemize}\setlength{\itemsep}{1pt}
+  \item BiLSTM mã hoá mỗi token thành vector ngữ cảnh hai chiều.
+  \item CRF kết hợp điểm phát xạ (từ BiLSTM) và điểm chuyển nhãn BIO.
+  \item Viterbi chọn chuỗi nhãn tối ưu trên toàn câu.
+\end{itemize}
+
+\textbf{Chuỗi nhãn dự đoán:}\\
+\texttt{B-LOC \; O \; O \; O \; B-LOC \; O}
+\end{block}
+
+\end{column}
+\hspace{0.03\textwidth}
+%====================== Cột phải ======================
+\begin{column}{0.44\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figs/bilstm_crf_architecture.png}
+\vspace{0.3em}
+{\tiny Sơ đồ kiến trúc BiLSTM + CRF: embedding → BiLSTM → CRF layer → nhãn NER.}
+
+
+%--------- Công thức xác suất CRF ---------
+%--------- Công thức xác suất CRF ---------
+\begin{block}{\textbf{Xác suất chuỗi nhãn trong CRF}}
+\centering
+\scriptsize
+\resizebox{0.92\textwidth}{!}{$
+P(y_1, \ldots, y_T \mid x_1, \ldots, x_T)
+= \frac{1}{Z(x)} \exp \left(
+\sum_t \big( \text{score}(y_t, x_t) + \text{transition}(y_{t-1}, y_t) \big)
+\right)
+$}
+{\tiny $h_t$ là vector ngữ cảnh đầu ra của BiLSTM tại vị trí $t$.}
+\end{block}
+\vspace{0.3em}
+
+\includegraphics[width=0.95\textwidth]{figs/viterbi_algorithm.png}
+{\tiny Thuật toán Viterbi: tìm chuỗi nhãn có xác suất cao nhất theo mô hình CRF.}
+\end{column}
+
+\end{columns}
+\end{frame}
+
+
+%======================================================
+% CHƯƠNG 3 - THỰC NGHIỆM
+
+\section{Thực nghiệm}
+
+\begin{frame}[shrink=10]{3.1. Dataset}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+  % Cột trái: ảnh + thành phần nhãn
+  \begin{column}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figs/label_distribution.png}
+    {\tiny Biểu đồ tỉ lệ giữa các nhãn NER trong dataset.}
+
+    \vspace{0.5em}
+    \textbf{Thành phần nhãn trong VLSP2016:}
+    \begin{itemize}
+      \item \textbf{O (Outside):} 93.58\%
+      \item \textbf{B-PER:} 2.03\%
+      \item \textbf{B-LOC:} 1.67\%
+      \item \textbf{B-ORG:} 0.32\%
+      \item \textbf{Các nhãn I-/MISC khác:} $\sim$ 2.4\%
+    \end{itemize}
+
+    \vspace{-0.3em}
+    {\scriptsize
+    \begin{alertblock}{Nhận xét dữ liệu}
+      Dữ liệu \textbf{mất cân bằng nghiêm trọng}:  
+      nhãn O chiếm \textbf{93.58\%} tổng token.  
+      Cần áp dụng \textit{class weighting} hoặc \textit{oversampling}.
+    \end{alertblock}
+    }
+  \end{column}
+
+  \hspace{0.03\textwidth}
+
+  % Cột phải: thông tin chi tiết
+  \begin{column}{0.50\textwidth}
+    \begin{block}{Thông tin dữ liệu}
+      \textbf{Nguồn:} \href{https://huggingface.co/datasets/datnth1709/VLSP2016-NER-data}{VLSP2016-NER-data (HuggingFace)}  \\
+      \textbf{Dạng dữ liệu:} file \texttt{.parquet} / token + nhãn IOB. \\
+      \textbf{Cấu trúc:} cột 1 = token, cột 2 = tag (B-, I-, O-). \\
+      \textbf{Quy mô:} \(\sim\)13.5k câu train, \(\sim\)3.4k câu test (~300k token). \\
+      \textbf{Nhận xét:} gán nhãn thủ công, khá sạch nhưng có thể nhiễu nhẹ.
+    \end{block}
+
+    \begin{block}{Hệ thống nhãn BIO trong VLSP2016}
+    \tiny
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{1.1}
+    \begin{center}
+    \resizebox{\columnwidth}{!}{\begin{tabular}{|c|p{2.6cm}|p{2.5cm}|}
+    \hline
+    \rowcolor{blue!10}
+    \textbf{Giá trị} & \textbf{Ý nghĩa} & \textbf{Loại thực thể} \\
+    \hline
+    0 & O – Outside & Không phải thực thể \\
+    1 & B-PER (Begin of Person) & Bắt đầu tên người \\
+    2 & I-PER (Inside Person) & Bên trong tên người \\
+    3 & B-ORG (Begin of Org) & Bắt đầu tổ chức \\
+    4 & I-ORG (Inside Org) & Bên trong tổ chức \\
+    5 & B-LOC (Begin of Location) & Bắt đầu địa danh \\
+    6 & I-LOC (Inside Location) & Bên trong địa danh \\
+    7 & B-MISC (Begin of Misc) & Bắt đầu thực thể khác \\
+    8 & I-MISC (Inside Misc) & Bên trong thực thể khác \\
+    \hline
+    \end{tabular}}
+    \end{center}
+    \end{block}
+
+  \end{column}
+\end{columns}
+\end{frame}
+%------------------------------------------------------
+% Slide 2:Tiền xử lý
+%------------------------------------------------------
+\begin{frame}[fragile, shrink=10]{3.2. Tiền xử lý dữ liệu}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+  \begin{column}{0.52\textwidth}
+
+  \begin{block}{Quy trình xây dựng bộ ngữ liệu}
+    \begin{itemize}
+      \item Tải dữ liệu \textbf{\href{https://huggingface.co/datasets/datnth1709/VLSP2016-NER-data}{VLSP2016 NER từ Hugging Face}}.
+      \item Chuyển về định dạng dòng: \texttt{token<space>tag}, dòng trống ngăn cách câu.
+      \item Gán \texttt{sentence\_id} cho từng câu.
+      \item Lưu ra \texttt{train.txt}, \texttt{test.txt}; loại bỏ dòng trống và token lỗi (không UTF-8).
+    \end{itemize}
+  \end{block}
+
+  \vspace{-0.2em}
+
+  \begin{exampleblock}{Quy tắc tiền xử lý}
+    \begin{itemize}
+      \item Giữ nguyên token đã tách sẵn trong dataset.
+      \item Gán nhãn BIO/IOB song song với \texttt{sentence\_id}.
+      \item Chia dữ liệu theo câu thành \textbf{Train / Validation / Test} 
+    (phục vụ huấn luyện, chọn mô hình và đánh giá cuối).
+      \item Tổng số câu: \textbf{13\,486}; tổng số token: \textbf{294\,501}.
+      \item Tổng số thực thể (tag $\neq$ O): \textbf{18\,901}.
+    \end{itemize}
+  \end{exampleblock}
+\vspace{0.3em}
+{\footnotesize
+\textit{Lưu ý: Validation set được dùng để chọn mô hình tốt nhất; 
+Test set chỉ dùng để báo cáo kết quả cuối.}
+}
+\end{column}
+\hspace{0.04\textwidth}
+  \begin{column}{0.46\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{figs/sample_tokens.png}
+
+  
+\resizebox{\textwidth}{!}{
+\begin{minipage}{\textwidth}
+\begin{block}{Chú giải}
+  \setlength{\itemsep}{1pt} % thu khoảng cách giữa các dòng
+  \setlength{\parskip}{0pt}
+  \begin{itemize}
+    \item Mỗi dòng = 1 token + 1 nhãn (định dạng IOB/BIO).
+    \item Dòng trống ngăn cách giữa các câu $\rightarrow$ gán \texttt{sentence\_id}.
+    \item Nhãn \texttt{B-}/\texttt{I-} xác định ranh giới và loại thực thể.
+    \item Ví dụ: “Thanh” $\rightarrow$ B-PER, “Berlin” $\rightarrow$ B-LOC, “Người Việt” $\rightarrow$ B/I-MISC.
+  \end{itemize}
+  
+  \end{block}
+  \vspace{0.25em}
+\end{minipage}
+}
+  \end{column}
+\end{columns}
+\end{frame}
+
+
+
+
+
+%-------------------------------------------
+
+%-------------------------------------------
+\begin{frame}[fragile, shrink=30]{3.3. Các phương pháp đánh giá}
+
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.5\textwidth}
+%================== Token-level metrics ==================
+\setbeamercolor{block title}{bg=blue!70!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Token-level Metrics (CoNLL) \,\,--\,\, Áp dụng: HMM / CRF / BiLSTM-CRF}}
+\[
+\textbf{Precision} = \frac{TP}{TP+FP}
+\qquad
+\textbf{Recall} = \frac{TP}{TP+FN}
+\]
+\[
+\textbf{F1} = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall}
+\qquad
+\textbf{Accuracy} = \frac{\#\text{token đúng}}{\#\text{token}}
+\]
+\end{block}
+
+\vspace{-0.3em}
+
+%================== Averaging ==================
+\setbeamercolor{block title}{bg=teal!70!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Cách tính trung bình \,\,--\,\, Áp dụng: CRF / BiLSTM-CRF}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Weighted}: có xét tần suất mỗi nhãn.
+  \item \textbf{ALL}: tính trên toàn bộ nhãn (kể cả \texttt{O}).
+  \item \textbf{Non-O}: chỉ xét token thuộc thực thể.
+\end{itemize}
+\end{block}
+
+
+
+
+%--------- Block Token-level evaluation ---------
+\setbeamercolor{block title}{bg=green!70!black, fg=white}
+\setbeamercolor{block body}{bg=green!5!white}
+\begin{block}{\textbf{Token-level Evaluation (helpers) \,\,--\,\, Áp dụng: CRF / BiLSTM-CRF}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{ALL labels}: tính F1 weighted trên toàn bộ nhãn (kể cả \texttt{O}).
+  \item \textbf{Non-O only}: loại bỏ \texttt{O}, chỉ đánh giá token thuộc thực thể.
+  \item Dùng \texttt{classification\_report} để xem Precision / Recall / F1 theo nhãn.
+\end{itemize}
+\end{block}
+
+\vspace{-0.3em}
+
+
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.44\textwidth}
+%--------- Block Span-level ---------
+\setbeamercolor{block title}{bg=cyan!70!black, fg=white}
+\setbeamercolor{block body}{bg=cyan!5!white}
+\begin{block}{\textbf{Span-level (Entity-level) \,\,--\,\, Áp dụng: CRF / BiLSTM-CRF}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Chuyển chuỗi BIO $\rightarrow$ danh sách span \texttt{(type, start, end)}.
+  \item Đếm \textbf{TP / FP / FN} dựa trên span khớp hoàn toàn.
+  \item Tính Precision / Recall / F1 ở mức \textbf{thực thể}.
+\end{itemize}
+\end{block}
+
+%--------- Block Error analysis ---------
+\setbeamercolor{block title}{bg=red!70!black, fg=white}
+\setbeamercolor{block body}{bg=red!5!white}
+\begin{block}{\textbf{Error Analysis \,\,--\,\, Áp dụng: CRF / BiLSTM-CRF}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Confusion pairs}: thống kê cặp \texttt{(gold, pred)} sai nhiều nhất.
+  \item Phát hiện lỗi phổ biến: \texttt{ORG $\leftrightarrow$ LOC}, \texttt{PER $\leftrightarrow$ O}.
+  \item \textbf{Worst cases}: chọn câu có nhiều lỗi Non-O nhất để phân tích.
+\end{itemize}
+\end{block}
+
+\vspace{-0.2em}
+
+\setbeamercolor{block title}{bg=purple!70!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Ý nghĩa của các phương pháp đánh giá}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Token-level metrics} phản ánh độ chính xác gán nhãn từng token, nhưng dễ bị chi phối bởi nhãn \texttt{O}.
+  \item \textbf{Non-O evaluation} tập trung vào các token thuộc thực thể, giúp đánh giá thực chất khả năng nhận dạng NER.
+  \item \textbf{Span-level metrics} đo chất lượng nhận dạng \emph{thực thể hoàn chỉnh}, phù hợp với yêu cầu ứng dụng thực tế.
+  \item \textbf{Error analysis} hỗ trợ phân tích lỗi phổ biến và định hướng cải tiến mô hình.
+\end{itemize}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
+
+%-------------------------------------------
+
+
+%-------------------------------------------
+% 3.4. Kết quả thực nghiệm – HMM (Before vs After)
+\begin{frame}[fragile, shrink=24]{3.4. Kết quả thực nghiệm – HMM  (Test set)}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.5\textwidth}
+\textbf{Trước cải thiện (Baseline HMM)}
+
+\vspace{0.15em}
+\centering
+\includegraphics[width=0.95\textwidth]{figs/hmm_before.png}
+
+
+\vspace{0.25em}
+\textbf{Nhận xét:}
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item \textbf{Macro F1 thấp} (\textasciitilde 0.51) $\Rightarrow$ mô hình yếu ở nhãn hiếm.
+  \item \textbf{B-MISC, I-MISC} có F1 = 0.00 (không nhận diện được).
+  \item Dự đoán bị \textbf{chi phối bởi nhãn \texttt{O}} (mất cân bằng dữ liệu).
+\end{itemize}
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.5\textwidth}
+\textbf{Sau cải thiện (Optimized HMM – Test set)}
+
+\vspace{0.15em}
+\centering
+\includegraphics[width=0.95\textwidth]{figs/hmm_after.png}
+
+\vspace{0.25em}
+\textbf{Cải thiện đạt được:}
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item \textbf{Macro F1:} \textbf{0.51 $\rightarrow$ 0.72}.
+  \item Nhãn hiếm \textbf{B-MISC, I-MISC} đạt F1 \textasciitilde \textbf{0.5}.
+  \item Recall các nhãn thực thể tăng (ít bỏ sót thực thể hơn).
+  \item Hiệu quả từ: \textbf{Balanced Sampling, Class Weighting, Focal Adjustment}.
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.05em}
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Nhận xét \& đánh giá}}
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1.0pt}
+  \item Tăng \textbf{Recall} ở nhãn hiếm $\Rightarrow$ đôi khi \textbf{Precision} giảm là đánh đổi hợp lý.
+  \item Tối ưu giúp giảm thiên lệch nhãn \texttt{O}; tuy nhiên HMM vẫn hạn chế do \textbf{Markov bậc 1}.
+\end{itemize}
+\end{block}
+
+\vspace{-0.05em}
+\setbeamercolor{block title}{bg=blue!80!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Tóm tắt (Test set)}}
+\footnotesize
+\textbf{Macro F1}: \textbf{0.72} \quad $\mid$ \quad
+\textbf{Weighted F1}: \textbf{0.98} \quad $\mid$ \quad
+\textbf{Accuracy}: \textbf{0.97}
+\end{block}
+\end{frame}
+
+%-------------------------------------------
+% 3.5. Phân tích lỗi – HMM
+%-------------------------------------------
+\begin{frame}[fragile, shrink=16]{3.5. Phân tích lỗi – HMM}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.55\textwidth}
+\textbf{Các lỗi NER phổ biến (Top errors)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.5\textwidth]{figs/hmm_top_errors.png}
+
+\vspace{0.25em}
+\textbf{Nhận xét:}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Lỗi phổ biến nhất là \textbf{O $\rightarrow$ B-*/I-*} và \textbf{B-*/I-* $\rightarrow$ O}.
+  \item Cho thấy mô hình vẫn \textbf{thiên lệch về nhãn \texttt{O}} dù đã tối ưu.
+  \item Các thực thể dài (\texttt{ORG}, \texttt{LOC}) dễ bị \textbf{đứt chuỗi}.
+\end{itemize}
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.54\textwidth}
+\textbf{Ví dụ câu bị gán nhãn sai}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.5\textwidth]{figs/hmm_mis_sentence.png}
+
+\vspace{0.25em}
+\textbf{Phân tích nguyên nhân:}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Cụm \texttt{ban quản\_lí rừng\_phòng\_hộ đầu nguồn Sêrêpôk} là một thực thể \textbf{ORG} dài.
+  \item HMM gán đúng \texttt{B-ORG} ở token đầu nhưng \textbf{mất toàn bộ chuỗi I-ORG phía sau}.
+  \item Chỉ cần một token có \textbf{emission hoặc transition thấp} $\Rightarrow$ toàn span bị gãy.
+  \item Mô hình \textbf{không khai thác được ngữ cảnh dài} để duy trì chuỗi thực thể.
+\end{itemize}
+\end{column}
+
+\end{columns}
+
+\vspace{0.2em}
+
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Kết luận}}
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1.0pt}
+  \item Đây là \textbf{lỗi mang tính cấu trúc của HMM}.  
+Do giả định \textbf{Markov bậc 1} và không có biểu diễn ngữ cảnh dài hạn, HMM dễ làm \textbf{đứt chuỗi các thực thể dài} như \texttt{ORG}.
+  \item Các kỹ thuật tối ưu giúp cải thiện \textbf{Recall} cho nhãn hiếm, nhưng \textbf{không thể khắc phục triệt để} hạn chế này, là động lực để sử dụng các mô hình ngữ cảnh sâu hơn như \textbf{CRF} và \textbf{BiLSTM+CRF}.
+\end{itemize}
+\end{block}
+
+
+
+\end{frame}
+
+%------------------------------------
+%-------------------------------------------
+% 3.6. Kết quả thực nghiệm – CRF
+%-------------------------------------------
+\begin{frame}[fragile, shrink=10]{3.6. Kết quả thực nghiệm – CRF (Test set)}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.48\textwidth}
+\textbf{Nhận xét tổng quan (Test set)}
+
+\vspace{0.3em}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{Accuracy rất cao}: \textbf{0.9904}.
+  \item \textbf{Weighted F1 (ALL)}: \textbf{0.9901} (bao gồm nhãn \texttt{O}).
+  \item \textbf{Non-O Weighted F1}: \textbf{0.9076} $\Rightarrow$ nhận diện thực thể tốt.
+  \item \textbf{Span-level F1}: \textbf{0.9191} (đánh giá ở mức thực thể hoàn chỉnh).
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{Ý nghĩa:}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item CRF học được \textbf{phụ thuộc nhãn toàn chuỗi}, giảm lỗi đứt span.
+  \item Hiệu quả rõ rệt với thực thể dài (\texttt{ORG}, \texttt{LOC}).
+  \item Vượt trội so với HMM trong bài toán NER tiếng Việt.
+\end{itemize}
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.52\textwidth}
+\textbf{So sánh theo đặc trưng (Test set)}
+
+\vspace{0.3em}
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Metric} 
+& \textbf{Base} 
+& \textbf{+Lower} 
+& \textbf{+Pre/Suf} 
+& \textbf{+Shape} \\ \hline
+
+Accuracy     
+& 0.9563 
+& 0.9850 
+& 0.9898 
+& \textbf{0.9904} \\ \hline
+
+Precision    
+& 0.9505 
+& 0.9843 
+& 0.9894 
+& \textbf{0.9900} \\ \hline
+
+Recall       
+& 0.9563 
+& 0.9850 
+& 0.9898 
+& \textbf{0.9904} \\ \hline
+
+F1-score     
+& 0.9484 
+& 0.9841 
+& 0.9895 
+& \textbf{0.9901} \\ \hline
+\end{tabular}
+
+\vspace{0.3em}
+{\footnotesize
+\textbf{Shape features}: \texttt{is\_upper, is\_title, is\_digit}
+}
+\end{column}
+
+\end{columns}
+
+\vspace{0.25em}
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Kết luận}}
+\small
+CRF cho kết quả vượt trội nhờ mô hình hóa \textbf{phụ thuộc nhãn toàn chuỗi} và khai thác hiệu quả 
+\textbf{đặc trưng hình thái + ngữ pháp}, đặc biệt phù hợp với NER tiếng Việt.
+\end{block}
+
+\end{frame}
+%-------------------------------------------
+%-------------------------------------------
+% 3.7. Phân tích lỗi – CRF
+%-------------------------------------------
+\begin{frame}[fragile, shrink=30]{3.7. Phân tích lỗi – CRF}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.5\textwidth}
+\textbf{Top confusions (Test set)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.5\textwidth]{figs/crf_top_confusions.png}
+
+\vspace{0.25em}
+\textbf{Nhận xét nhanh:}
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item Lỗi nổi bật là \textbf{I-ORG $\rightarrow$ O} và \textbf{B-ORG $\rightarrow$ O}
+  $\Rightarrow$ \textbf{đứt span ORG dài} (mất nhãn bên trong thực thể).
+  \item Nhiều lỗi \textbf{B-LOC $\rightarrow$ O} / \textbf{I-LOC $\leftrightarrow$ B-LOC}
+  $\Rightarrow$ sai \textbf{ranh giới thực thể} (boundary) trong chuỗi LOC.
+  \item Nhầm \textbf{PER $\leftrightarrow$ LOC} (vd: \texttt{B-PER -> B-LOC}, \texttt{B-LOC -> B-PER})
+  thường đến từ \textbf{viết hoa / token dạng tên riêng}.
+\end{itemize}
+
+
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.5\textwidth}
+\textbf{Worst case (ví dụ tiêu biểu)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.5\textwidth]{figs/crf_worst_case.png}
+
+\vspace{0.25em}
+\textbf{Giải thích nguyên nhân:}
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item Nhiều token \textbf{địa danh nhiều từ} bị gán \texttt{B-LOC} rồi các token sau lại rơi về \texttt{O}
+  $\Rightarrow$ \textbf{đứt chuỗi LOC} (boundary + transition yếu).
+  \item Các token dạng \textbf{số / ký hiệu} (vd: \texttt{25}, \texttt{101}, \texttt{325})
+  làm nhiễu đặc trưng, dễ kéo nhãn \texttt{I-ORG} về \texttt{O}.
+  \item Một số cụm có \textbf{từ khóa gợi ORG/LOC} (vd: \texttt{UBND}, \texttt{tỉnh}, \texttt{Uỷ\_ban})
+  nhưng ngữ cảnh cụ thể không đủ mạnh $\Rightarrow$ dễ nhầm \textbf{ORG $\leftrightarrow$ LOC} hoặc \textbf{ORG $\rightarrow$ O}.
+\end{itemize}
+
+\vspace{-0.25em}
+\setbeamercolor{block title}{bg=teal!80!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Thông điệp chính}}
+\small
+Các đặc trưng hình thái \& ngữ pháp giúp CRF nhận diện tốt hơn,
+nhưng vẫn khó với \textbf{thực thể dài} và \textbf{boundary LOC/ORG}.\\
+Để giảm lỗi span dài \& boundary, cần \textbf{ngữ cảnh mạnh hơn} (BiLSTM/Transformer)
+hoặc bổ sung \textbf{feature theo cụm từ} / \textbf{gazetteer} cho LOC/ORG.
+\end{block}
+\end{column}
+
+\end{columns}
+\end{frame}
+%-------------------------------------------
+%-------------------------------------------
+% 3.8. Kết quả thực nghiệm – BiLSTM-CRF (TEST)
+%-------------------------------------------
+\begin{frame}[fragile, shrink=32]{3.8. Kết quả thực nghiệm – BiLSTM-CRF (Test set)}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.52\textwidth}
+\textbf{Kết quả trên Test set (BiLSTM-CRF)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.95\textwidth]{figs/bilstm_test_report.png}
+
+
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.48\textwidth}
+\textbf{Tóm tắt chỉ số (Test set)}
+
+\vspace{0.1em}
+\setbeamercolor{block title}{bg=blue!80!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Nhận xét nhanh}}
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item Token-level (ALL) cao do nhãn \texttt{O} chi phối $\Rightarrow$ \textbf{Weighted F1 = 0.9843}.
+  \item Khi chỉ xét \textbf{Non-O}, F1 giảm còn \textbf{0.8642} $\Rightarrow$ khó ở thực thể hiếm/dài.
+  \item Lỗi phổ biến: bỏ sót thực thể (dự đoán về \texttt{O}), đặc biệt \textbf{LOC/ORG}.
+\end{itemize}
+\end{block}
+\vspace{0.1em}
+\setbeamercolor{block title}{bg=blue!80!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Token-level}}
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1.2pt}
+  \item \textbf{ALL incl O:} Weighted F1 = \textbf{0.9843}, Acc = \textbf{0.9851}, Macro F1 = \textbf{0.8535}
+  \item \textbf{Non-O only:} Weighted F1 = \textbf{0.8642}, Micro F1 = \textbf{0.8686}, Macro F1 = \textbf{0.8532}
+\end{itemize}
+\end{block}
+
+\vspace{0.2em}
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Span-level (Entity-level)}}
+\footnotesize
+P=\textbf{0.9253} \quad $\mid$ \quad R=\textbf{0.8450} \quad $\mid$ \quad F1=\textbf{0.8834}\\
+TP=\textbf{409}, FP=\textbf{33}, FN=\textbf{75}
+\end{block}
+
+\vspace{0.15em}
+\setbeamercolor{block title}{bg=teal!80!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Kết luận}}
+\footnotesize
+BiLSTM-CRF cải thiện biểu diễn ngữ cảnh so với HMM, nhưng trong đồ án này
+\textbf{CRF vẫn tốt hơn} (Non-O F1 và Span-F1 cao hơn) $\Rightarrow$ đặc trưng thủ công + CRF phù hợp dữ liệu hiện tại.
+\end{block}
+\end{column}
+
+\end{columns}
+\end{frame}
+%-------------------------------------------
+%-------------------------------------------
+% 3.9. Phân tích lỗi – BiLSTM-CRF (TEST)
+%-------------------------------------------
+\begin{frame}[fragile, shrink=35]{3.9. Phân tích lỗi – BiLSTM-CRF}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%====================== LEFT ======================
+\begin{column}{0.5\textwidth}
+\textbf{Top confusions (Test set)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.5\textwidth]{figs/bilstm_top_confusions.png}
+
+\vspace{0.25em}
+\textbf{Nhận xét:}
+\begin{itemize}\setlength{\itemsep}{1.4pt}
+  \item Lỗi lớn nhất: \textbf{B-LOC $\rightarrow$ O} (238), \textbf{I-ORG $\rightarrow$ O} (137).
+  \item Mô hình thường \textbf{bỏ sót thực thể} (FN tăng) $\Rightarrow$ Recall span giảm.
+  \item Có hiện tượng \textbf{nhầm ranh giới BIO}: \texttt{I-LOC $\leftrightarrow$ B-LOC}, \texttt{B-LOC $\rightarrow$ B-PER}.
+\end{itemize}
+
+\vspace{0.15em}
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Ý nghĩa}}
+\footnotesize
+Sai lệch chủ yếu đến từ \textbf{entity dài} và \textbf{tên riêng/viết tắt/ngoại ngữ} khiến emission không ổn định $\Rightarrow$ dễ rơi về nhãn \texttt{O}.\\
+$\Rightarrow$ \textbf{Kết luận:} BiLSTM-CRF học ngữ cảnh tốt hơn HMM, nhưng vẫn cần \textbf{feature/embedding mạnh hơn} hoặc \textbf{pretrained encoder} (PhoBERT/XLM-R) để xử lý entity dài và tên riêng đa dạng.
+\end{block}
+\end{column}
+
+%====================== RIGHT ======================
+\begin{column}{0.44\textwidth}
+\textbf{Ví dụ worst case (Test set)}
+
+\vspace{0.2em}
+\centering
+\includegraphics[width=0.95\textwidth]{figs/bilstm_worst_case.png}
+
+\vspace{0.25em}
+\textbf{Giải thích nguyên nhân:}
+\begin{itemize}\setlength{\itemsep}{1.2pt}
+  \item Câu chứa nhiều thực thể dài/đan xen (ORG–LOC–PER) $\Rightarrow$ khó giữ ranh giới span.
+  \item Một vài token “nhiễu” (dấu câu, viết tắt như \texttt{ĐH}, \texttt{VN}, tên ngoại như \texttt{Temple}) làm CRF layer khó nối chuỗi \texttt{I-*}.
+  \item Khi \textbf{một token bị gán O}, cả thực thể dài có thể bị \textbf{đứt chuỗi} $\Rightarrow$ giảm F1 span.
+\end{itemize}
+
+
+\end{column}
+
+\end{columns}
+\end{frame}
+%-------------------------------------------
+
+%-------------------------------------------
+
+%-------------------------------------------
+% 3.10. So sánh tổng quan các mô hình (bám sát TEST set) - FIX overflow
+%-------------------------------------------
+\begin{frame}[fragile, shrink=16]{3.10. So sánh tổng quan các mô hình}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%===================== LEFT =====================
+\begin{column}{0.44\textwidth}
+
+\setbeamercolor{block title}{bg=teal!75!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Nhận xét so sánh mô hình}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item \textbf{CRF tốt nhất} (Test): \textbf{Acc=0.9904}, \textbf{Span-F1=0.9191}, \textbf{Non-O F1=0.9076}.
+  \item \textbf{BiLSTM+CRF} đứng sau: \textbf{Acc=0.9851}, \textbf{Span-F1=0.8834}, \textbf{Non-O F1=0.8642}.
+  \item \textbf{HMM (tối ưu)}: Macro-F1 \textbf{0.51$\rightarrow$0.72}, nhưng vẫn kém do hạn chế Markov.
+  \item \textbf{Token F1 (ALL)} cao vì \texttt{O} nhiều $\Rightarrow$ ưu tiên \textbf{Non-O F1} \& \textbf{Span-F1}.
+\end{itemize}
+\end{block}
+
+\vspace{0.2em}
+\setbeamercolor{block title}{bg=purple!80!black, fg=white}
+\setbeamercolor{block body}{bg=purple!5!white}
+\begin{block}{\textbf{Kết luận ngắn}}
+\begin{itemize}\setlength{\itemsep}{1.5pt}
+  \item \textbf{CRF phù hợp nhất} với dữ liệu hiện tại (feature thủ công + ràng buộc chuỗi).
+  \item \textbf{BiLSTM+CRF} sẽ mạnh hơn nếu có \textbf{data lớn hơn / embedding pretrained}.
+\end{itemize}
+\end{block}
+
+\end{column}
+
+%===================== RIGHT =====================
+\begin{column}{0.5\textwidth}
+
+\setbeamercolor{block title}{bg=blue!75!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Bảng so sánh hiệu suất (Test set)}}
+\centering
+\renewcommand{\arraystretch}{1.18}
+\setlength{\tabcolsep}{4pt}
+
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{blue!15}
+\textbf{Chỉ số} & \textbf{HMM} & \textbf{CRF} & \textbf{BiLSTM} \\
+\hline
+Accuracy & 0.97 & \textbf{0.9904} & 0.9851 \\
+\hline
+Token F1 (ALL incl O) & 0.98 & \textbf{0.9901} & 0.9843 \\
+\hline
+Token F1 (Non-O only) & -- & \textbf{0.9076} & 0.8642 \\
+\hline
+Macro F1 (Token) & \textbf{0.72} & 0.8875 & 0.8535 \\
+\hline
+Span F1 (Entity-level) & -- & \textbf{0.9191} & 0.8834 \\
+\hline
+\end{tabular}
+} % end resizebox
+
+\vspace{0.25em}
+{\footnotesize
+\textit{Ghi chú: HMM có Macro/Weighted/Acc; CRF/BiLSTM-CRF có thêm Non-O \& Span-F1.}
+}
+\end{block}
+
+\vspace{0.1em}
+\setbeamercolor{block title}{bg=gray!70!black, fg=white}
+\setbeamercolor{block body}{bg=gray!5!white}
+\begin{block}{\textbf{Ý nghĩa chỉ số}}
+\begin{itemize}\setlength{\itemsep}{1.2pt}
+  \item \textbf{Token F1 (ALL)}: dễ “ảo” vì \texttt{O} nhiều.
+  \item \textbf{Non-O F1}: chất lượng nhận diện thực thể (bỏ \texttt{O}).
+  \item \textbf{Span F1}: đúng thực thể hoàn chỉnh (khắt khe nhất).
+\end{itemize}
+\end{block}
+
+\end{column}
+\end{columns}
+\end{frame}
+%-------------------------------------------
+
+%-------------------------------------------
+
+
+% 5. Kết luận & Hướng phát triển
+\section{Kết luận \& Hướng phát triển}
+%-------------------------------------------
+\begin{frame}[shrink=12]{Kết luận \& Hướng phát triển}
+\scriptsize
+\begin{columns}[T,onlytextwidth]
+
+%========= CỘT TRÁI: KẾT LUẬN =========
+\begin{column}{0.52\textwidth}
+\setbeamercolor{block title}{bg=blue!70!black, fg=white}
+\setbeamercolor{block body}{bg=blue!5!white}
+\begin{block}{\textbf{Kết luận từ thực nghiệm}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Ba mô hình \textbf{HMM, CRF và BiLSTM+CRF} đều áp dụng được cho bài toán
+  \textbf{Named Entity Recognition (NER) tiếng Việt} trên bộ dữ liệu \textbf{VLSP 2016}.
+  
+  \item \textbf{CRF cho kết quả tốt nhất trên Test set}:
+  \textbf{Accuracy = 0.9904}, \textbf{Non-O F1 = 0.9076}, \textbf{Span-F1 = 0.9191},
+  cho thấy khả năng nhận diện thực thể \textbf{ổn định và chính xác ở mức entity hoàn chỉnh}.
+  
+  \item Kết quả này khẳng định \textbf{đặc trưng hình thái \& ngữ pháp}
+  (lowercase, prefix/suffix, word shape, is\_upper, is\_title, is\_digit)
+  vẫn \textbf{rất hiệu quả với tiếng Việt} khi kết hợp cùng CRF.
+  
+  \item \textbf{BiLSTM+CRF} đạt kết quả tốt nhưng thấp hơn CRF
+  (\textbf{Non-O F1 = 0.8642}, \textbf{Span-F1 = 0.8834}),
+  nguyên nhân chủ yếu do \textbf{dữ liệu huấn luyện chưa đủ lớn}
+  và \textbf{chưa sử dụng embedding pretrained}.
+  
+  \item \textbf{HMM (tối ưu)} cải thiện đáng kể Macro-F1
+  (\textbf{0.51 $\rightarrow$ 0.72}),
+  nhưng vẫn bị giới hạn bởi \textbf{giả định Markov bậc 1}
+  và không mô hình hóa được ngữ cảnh dài.
+\end{itemize}
+\end{block}
+\end{column}
+
+\hspace{0.03\textwidth}
+
+%========= CỘT PHẢI: HƯỚNG PHÁT TRIỂN =========
+\begin{column}{0.45\textwidth}
+\setbeamercolor{block title}{bg=teal!75!black, fg=white}
+\setbeamercolor{block body}{bg=teal!5!white}
+\begin{block}{\textbf{Hướng phát triển}}
+\textbf{Ngắn hạn:}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Bổ sung \textbf{gazetteer / từ điển tên riêng} cho CRF
+  để cải thiện nhận diện \textbf{thực thể hiếm và thực thể dài}.
+  \item Kết hợp \textbf{đặc trưng ký tự} (character-level)
+  thông qua các mô hình \textbf{BiLSTM–CNN–CRF}.
+\end{itemize}
+
+\vspace{0.2em}
+\textbf{Dài hạn:}
+\begin{itemize}\setlength{\itemsep}{2pt}
+  \item Fine-tune các mô hình ngôn ngữ pretrained cho tiếng Việt như
+  \textbf{PhoBERT}, \textbf{XLM-R} kết hợp với CRF/Viterbi ở đầu ra.
+  \item Khai thác các hướng \textbf{few-shot / zero-shot NER}
+  với các mô hình mới như \textbf{GLiNER (2024)}
+  để giảm phụ thuộc vào dữ liệu gán nhãn.
+  \item Đóng gói hệ thống thành \textbf{pipeline suy diễn hoặc API}
+  phục vụ các ứng dụng thực tế như chatbot, tìm kiếm, trích xuất thông tin.
+\end{itemize}
+\end{block}
+\end{column}
+
+\end{columns}
+\end{frame}
+%-------------------------------------------
+\appendix   % <--- thêm dòng này trước 3 slide cuối
+\section*{Phụ lục}
+\begin{frame}[shrink=8]{Phân công công việc nhóm}
+\scriptsize
+\centering
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{6pt}
+
+\rowcolors{2}{blue!3!white}{white}
+\begin{tabular}{|p{3.5cm}|c|p{6.5cm}|}
+\hline
+\rowcolor{uitblue!90!black}
+\textcolor{white}{\textbf{Thành viên}} &
+\textcolor{white}{\textbf{MSSV}} &
+\textcolor{white}{\textbf{Vai trò chính}} \\
+\hline
+\textbf{Nguyễn Công Phát (Nhóm trưởng)} & 23521143 &
+Phụ trách chính toàn bộ dự án:  
+thiết kế pipeline, cài đặt \textbf{HMM} và \textbf{CRF},  
+xử lý – chuẩn hoá dữ liệu, tối ưu \textbf{Focal Loss},  
+viết báo cáo tổng hợp, hoàn thiện slide thuyết trình. \\
+\hline
+\textbf{Phạm Trần Khánh Duy} & 23520384 &
+Phát triển và huấn luyện mô hình \textbf{BiLSTM–CRF},  
+thực hiện phân tích kết quả và đánh giá hiệu năng,  
+tham gia viết phần kết quả thực nghiệm. \\
+\hline
+\textbf{Nguyễn Lê Phong} & 23521168 &
+Cài đặt mô hình \textbf{CRF}, xử lý đặc trưng,  
+hỗ trợ tổng hợp báo cáo và trình bày phần \textbf{kết luận–hướng phát triển}. \\
+\hline
+\end{tabular}
+\end{frame}
+
+
+\begin{frame}{Tài liệu tham khảo}
+  \scriptsize
+  \begin{thebibliography}{10}
+
+    \bibitem{lafferty2001}
+    J. Lafferty, A. McCallum, F. Pereira (2001).
+    \textit{Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data}.
+    ICML.
+
+    \bibitem{huang2015}
+    Z. Huang, W. Xu, K. Yu (2015).
+    \textit{Bidirectional LSTM-CRF Models for Sequence Tagging}.
+    arXiv:1508.01991.
+
+    \bibitem{nguyen2018}
+    A.-D. Nguyen, K.-H. Nguyen, V.-V. Ngo (2018).
+    \textit{Neural Sequence Labeling for Vietnamese POS Tagging and NER}.
+    arXiv:1811.03754v2.
+
+    \bibitem{vlsp2016}
+    VLSP 2016.
+    \textit{Vietnamese Named Entity Recognition Shared Task Dataset}.
+    (HuggingFace).
+
+  \end{thebibliography}
+\end{frame}
+
+\begin{frame}{Cảm ơn!}
+  \begin{center}
+    \Large Xin cảm ơn cô Nguyễn Thị Quý và các bạn! \\
+    \vspace{0.5cm}
+    \normalsize Hỏi đáp — Demo 
+  \end{center}
+\end{frame}
+
+\end{document}
