@@ -4,11 +4,11 @@
   </a>
 </p>
 
-<h1 align="center"><b>CS221.Q12 - Vietnamese Named Entity Recognition</b></h1>
+<h1 align="center"><b>CS221.Q12 - Natural Language Processing</b></h1>
 
 # CS221 Course Project: Vietnamese Named Entity Recognition (NER)
 
-> This repository contains the full implementation of a **Vietnamese Named Entity Recognition (NER)** system developed for the course **CS221 – Natural Language Processing** at the University of Information Technology (UIT – VNU-HCM).  
+> This repository contains the full implementation of a **Vietnamese Named Entity Recognition (NER)** system developed for the course **CS221.Q12 – Natural Language Processing** at the University of Information Technology (UIT – VNU-HCM).  
 >  
 > The project focuses on **sequence labeling** for Vietnamese text using three classical and neural approaches: **Hidden Markov Model (HMM)**, **Conditional Random Fields (CRF)**, and **BiLSTM-CRF**.  
 >  
