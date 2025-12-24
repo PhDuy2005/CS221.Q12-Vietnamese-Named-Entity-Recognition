@@ -66,10 +66,11 @@
   - `train.txt`
   - `test.txt`
 - Entity types include:
-  - `PER` (Person)
-  - `ORG` (Organization)
-  - `LOC` (Location)
-  - `MISC`
+  - `PER` (Person entities)
+  - `ORG` (Organization entities)
+  - `LOC` (Location entities)
+  - `MISC` (Miscellaneous entities)
+  - `O` (Outside tag for non-entity tokens)
 
 ---
 
@@ -115,3 +116,54 @@ CS221.Q12-Vietnamese-Named-Entity-Recognition/
 ```
 
 ---
+## Methodology
+
+### 1. Hidden Markov Model (HMM)
+- Classical probabilistic sequence labeling model.
+- Trained using:
+  - Emission probabilities
+  - Transition probabilities
+- Used as a **baseline** model.
+
+### 2. Conditional Random Fields (CRF)
+- Discriminative sequence labeling model.
+- Feature-based approach:
+  - Current word
+  - Context window
+  - Capitalization patterns
+- Implemented using **sklearn-crfsuite**.
+
+### 3. BiLSTM-CRF
+- Neural sequence labeling architecture:
+  - Word embeddings
+  - Bidirectional LSTM
+  - CRF decoding layer
+- Implemented using **PyTorch + pytorch-crf**.
+- Achieved the best overall performance.
+
+---
+
+## Installation
+
+### 1. Clone repository
+```bash
+git clone https://github.com/paht2005/CS221.Q12-Vietnamese-Named-Entity-Recognition.git
+cd CS221.Q12-Vietnamese-Named-Entity-Recognition
+```
+### 2. (Optional) Create virtual environment
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Linux / Mac
+.venv\Scripts\activate         # Windows
+
+```
+### 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+--- 
+
+## Usage
+### 1. Train models
+Open and run notebooks in 'src/':
