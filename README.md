@@ -13,9 +13,7 @@
 > The project focuses on **sequence labeling** for Vietnamese text using three classical and neural approaches: **Hidden Markov Model (HMM)**, **Conditional Random Fields (CRF)**, and **BiLSTM-CRF**.  
 >  
 > In addition to model training and evaluation, we also provide a **Flask-based interactive demo** that allows users to switch between CRF and BiLSTM-CRF models and visualize prediction results.
-<p align="center">
-  <img src="outputs/demo.png" alt="Vietnamese NER Demo" width="900">
-</p>
+
 
 ---
 
@@ -251,3 +249,7 @@ A screenshot of the demo interface is available at:
 
 ```text
 outputs/demo.png
+```
+<p align="center">
+  <img src="outputs/demo.png" alt="Vietnamese NER Demo" width="900">
+</p>
