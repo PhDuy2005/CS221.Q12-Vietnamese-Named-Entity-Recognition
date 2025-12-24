@@ -72,3 +72,72 @@
   - `O` (Outside tag for non-entity tokens)
 
 ---
+
+## Repository Structure
+```
+CS221.Q12-Vietnamese-Named-Entity-Recognition/
+│
+├── dataset/
+│   ├── train.txt                  # Training data (VLSP 2016 format)
+│   └── test.txt                   # Test data (VLSP 2016 format)
+│
+├── figs/
+│   ├── *.jpg                      # Figures used in report and slides
+│   └── *.png                      # Figures used in report and slides
+│
+├── models/
+│   ├── crf_best.joblib            # Best CRF model (sklearn-crfsuite)
+│   └── bilstm_crf_best.pt         # Best BiLSTM-CRF model (PyTorch)
+│
+├── outputs/
+│   ├── CRF_test_report.txt        # CRF evaluation results on test set
+│   ├── CRF_valid_report.txt       # CRF evaluation results on validation set
+│   ├── bilstm_valid_report_best.txt# Best BiLSTM-CRF validation report
+│   ├── bilstm_test_report.txt     # BiLSTM-CRF evaluation results on test set
+│   └── demo.png                   # Screenshot of Flask demo interface
+│
+├── src/
+│   ├── train_HMM.ipynb            # Training notebook for HMM model
+│   ├── train_CRF.ipynb            # Training notebook for CRF model
+│   └── train_BiLSTM-CRF.ipynb     # Training notebook for BiLSTM-CRF model
+│
+├── static/
+│   ├── style.css                  # CSS styles for Flask web demo
+│   └── script.js                  # JavaScript logic for UI interactions
+│
+├── templates/
+│   └── index.html                 # Main HTML template for Flask app
+│
+├── app.py                         # Flask application entry point
+├── requirements.txt               # Python dependencies
+├── CS221_Slides.pdf               # Presentation slides
+└── README.md                      # Project documentation
+```
+
+---
+## Methodology
+
+### 1. Hidden Markov Model (HMM)
+- Classical probabilistic sequence labeling model.
+- Trained using:
+  - Emission probabilities
+  - Transition probabilities
+- Used as a **baseline** model.
+
+### 2. Conditional Random Fields (CRF)
+- Discriminative sequence labeling model.
+- Feature-based approach:
+  - Current word
+  - Context window
+  - Capitalization patterns
+- Implemented using **sklearn-crfsuite**.
+
+### 3. BiLSTM-CRF
+- Neural sequence labeling architecture:
+  - Word embeddings
+  - Bidirectional LSTM
+  - CRF decoding layer
+- Implemented using **PyTorch + pytorch-crf**.
+- Achieved the best overall performance.
+
+---
