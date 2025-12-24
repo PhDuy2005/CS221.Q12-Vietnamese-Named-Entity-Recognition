@@ -71,4 +71,39 @@
 ---
 
 ## Repository Structure
-
+CS221.Q12-Vietnamese-Named-Entity-Recognition/
+│
+├── dataset/
+│ ├── train.txt
+│ └── test.txt
+│
+├── figs/
+│ └── *.png # Figures used in report and slides
+│
+├── models/
+│ ├── crf_best.joblib
+│ └── bilstm_crf_best.pt
+│
+├── outputs/
+│ ├── CRF_test_report.txt
+│ ├── CRF_valid_report.txt
+│ ├── bilstm_valid_report_best.txt
+│ ├── bilstm_test_report.txt
+│ └── demo.png # Screenshot of Flask demo
+│
+├── src/
+│ ├── train_HMM.ipynb
+│ ├── train_CRF.ipynb
+│ └── train_BiLSTM-CRF.ipynb
+│
+├── static/
+│ ├── style.css
+│ └── script.js
+│
+├── templates/
+│ └── index.html
+│
+├── app.py # Flask application
+├── requirements.txt # Python dependencies
+├── CS221_Slides.pdf # Presentation slides
+└── README.md
