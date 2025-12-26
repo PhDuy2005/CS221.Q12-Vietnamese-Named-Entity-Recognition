@@ -171,16 +171,8 @@ pip install -r requirements.txt
 --- 
 
 ## Usage
-### 1. Train models
-Open and run notebooks in **src/**:
-```bash
-jupyter notebook
-```
-- train_HMM.ipynb
-- train_CRF.ipynb
-- train_BiLSTM-CRF.ipynb
 
-### 2. Run Flask demo
+### Run Flask demo
 ```bash
 python app.py
 ```
